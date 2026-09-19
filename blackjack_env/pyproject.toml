@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: BSD-3-Clause
+
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openenv-blackjack_env"
+version = "0.1.0"
+description = "Blackjack environment for OpenEnv with GRPO finetuning support"
+requires-python = ">=3.10"
+dependencies = [
+    "openenv>=0.2.2",
+    "transformers>=4.40",
+    "trl>=0.9",
+    "datasets>=2.18",
+    "accelerate>=0.30",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.0.0",
+]
+
+[project.scripts]
+server = "blackjack_env.server.app:main"
+
+[tool.setuptools]
+include-package-data = true
+packages = ["blackjack_env", "blackjack_env.server"]
+package-dir = { "blackjack_env" = ".", "blackjack_env.server" = "server" }
+
+[tool.pyright]
+reportMissingTypeArgument = "none"
+reportMissingTypeStubs = "none"
