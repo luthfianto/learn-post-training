@@ -38,6 +38,7 @@ blackjack_env/
 ├── eval_baseline.py                 # scripted-policy EV check
 ├── collect_sft.py                   # scripted-teacher SFT dataset
 ├── train_grpo.py                    # TRL GRPOTrainer finetuning
+├── arena.py                         # watch/compare models vs baselines
 ├── server/
 │   ├── blackjack_env_environment.py # game logic
 │   └── app.py                       # FastAPI + WebSocket server
@@ -100,6 +101,65 @@ Real run:
 python -m blackjack_env.train_grpo \
   --model Qwen/Qwen2.5-0.5B-Instruct \
   --num-prompts 128 --num-generations 8 --max-steps 200
+```
+
+## Watch and evaluate the model (arena)
+
+`arena.py` plays a model and any baselines over the **same seeded deals**, so
+results are directly comparable. It prints per-hand transcripts (the model's raw
+output, the parsed action, and whether it was valid) and a final scoreboard with
+expected value, win/loss/push/blackjack rates and invalid-action counts.
+
+```bash
+# Watch a GRPO-finetuned checkpoint for 20 hands, show 5 transcripts
+python -m blackjack_env.arena --model outputs/blackjack-grpo --episodes 20 --show-hands 5
+
+# Also print the exact prompt sent to the model each turn
+python -m blackjack_env.arena --model outputs/blackjack-grpo --show-hands 3 --show-prompt
+
+# Write a full per-episode log (observation, prompt, response, reward) to JSONL
+python -m blackjack_env.arena --model outputs/blackjack-grpo --episodes 200 \
+  --log-file logs/arena.jsonl
+
+# Compare against basic strategy and random play over 2000 shared deals
+python -m blackjack_env.arena --model outputs/blackjack-grpo \
+  --contestants model,basic,random --episodes 2000
+
+# Baselines only (no model download)
+python -m blackjack_env.arena --contestants basic,random --episodes 20000
+```
+
+Each JSONL log line is one episode:
+
+```json
+{
+  "seed": 0, "contestant": "model", "reward": -1.0, "invalid": 0, "turns": 1,
+  "transcript": [
+    {
+      "turn": 1,
+      "observation": "Dealer shows: 7\nYour hand: [10, 3] ...",
+      "prompt": "<s>[INST] <<SYS>> ... [/INST]",
+      "response": "{\"action\": \"stand\"}",
+      "action": "stand", "valid": true, "reward": -1.0, "done": true,
+      "observation_after": "Dealer hand: [7, 9, 2] ..."
+    }
+  ]
+}
+```
+
+Use `--temperature 0` (the default) for greedy play, or raise it to see the
+model's sampling distribution. `--model` accepts a Hub id or the directory saved
+by `train_grpo.py`.
+
+To see prompts/completions during **training**, pass `--log-completions` to
+`train_grpo.py` (TRL prints sampled completions and their rewards).
+
+Example scoreboard:
+
+```
+contestant    hands       EV     win    loss    push  blackjack  invalid
+basic         20000  -0.0215   43.3%   48.0%    8.7%       5.0%        0
+random        20000  -0.3036   31.5%   64.3%    4.2%       5.0%        0
 ```
 
 ## Optional: scripted-teacher SFT data

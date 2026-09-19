@@ -426,6 +426,33 @@ def env_reward_func(completions, env_reward=None, **kwargs):
     return [float(value) for value in env_reward]
 
 
+def format_prompt(tokenizer: Any, messages: list[dict[str, Any]]) -> str:
+    """Public wrapper around the chat-template prompt formatter."""
+    return _format_prompt(tokenizer, messages)
+
+
+def generate_action(
+    model: Any,
+    tokenizer: Any,
+    input_ids: list[int],
+    *,
+    max_new_tokens: int = 16,
+    temperature: float = 1.0,
+    top_p: float = 1.0,
+) -> tuple[str, str, list[int]]:
+    """Sample one model turn and parse it into ``(action, raw_text, token_ids)``."""
+    gen_ids, _ = _generate_turn(
+        model,
+        tokenizer,
+        input_ids,
+        max_new_tokens=max_new_tokens,
+        temperature=temperature,
+        top_p=top_p,
+    )
+    raw_text = tokenizer.decode(gen_ids, skip_special_tokens=True)
+    return parse_action_from_text(raw_text), raw_text, gen_ids
+
+
 __all__ = [
     "BlackjackSession",
     "BlackjackSessionFactory",
@@ -436,5 +463,7 @@ __all__ = [
     "env_reward_func",
     "extract_seed",
     "extract_state_from_messages",
+    "format_prompt",
+    "generate_action",
     "parse_action_from_text",
 ]

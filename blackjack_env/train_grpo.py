@@ -62,6 +62,19 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--temperature", type=float, default=1.0)
     parser.add_argument("--top-p", type=float, default=1.0)
     parser.add_argument("--max-steps", type=int, default=-1)
+    parser.add_argument(
+        "--save-steps",
+        type=int,
+        default=0,
+        help="Save a checkpoint every N steps (0 disables). Load them in arena.py.",
+    )
+    parser.add_argument("--save-total-limit", type=int, default=2)
+    parser.add_argument(
+        "--log-completions",
+        action="store_true",
+        help="Print sampled prompts/completions and rewards during training.",
+    )
+    parser.add_argument("--num-completions-to-print", type=int, default=2)
     parser.add_argument("--num-decks", type=int, default=6)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument(
@@ -114,7 +127,11 @@ def main() -> None:
         top_p=args.top_p,
         max_steps=args.max_steps,
         logging_steps=1,
-        save_strategy="no",
+        save_strategy="steps" if args.save_steps > 0 else "no",
+        save_steps=args.save_steps if args.save_steps > 0 else 500,
+        save_total_limit=args.save_total_limit,
+        log_completions=args.log_completions,
+        num_completions_to_print=args.num_completions_to_print,
         report_to="none",
         bf16=use_cuda,
         seed=args.seed,
